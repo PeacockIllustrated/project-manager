@@ -1,11 +1,6 @@
 
 
 import React, { useState, useRef } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-// FIX: Changed import path from 'firebase/storage' to '@firebase/storage' to resolve module export errors, which can occur with certain project dependency setups.
-import { ref, uploadBytes, getDownloadURL, deleteObject } from '@firebase/storage';
-import { collection, addDoc, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
-import { storage, db } from '../../firebase';
 import { Project, Document, CostItem } from '../../types';
 import { UploadIcon, FolderIcon, ChevronLeftIcon } from '../icons/Icons.tsx';
 import Placeholder from '../ui/Placeholder';
@@ -16,9 +11,11 @@ interface DocumentManagerProps {
   documents: Document[];
   costs: CostItem[];
   onBack: () => void;
+  onAddDocument: (doc: Omit<Document, 'id'>) => void;
+  onDeleteDocument: (docId: string) => void;
 }
 
-const DocumentManager: React.FC<DocumentManagerProps> = ({ project, documents, costs, onBack }) => {
+const DocumentManager: React.FC<DocumentManagerProps> = ({ project, documents, costs, onBack, onAddDocument, onDeleteDocument }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,24 +32,20 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ project, documents, c
     setIsUploading(true);
 
     try {
-      const storagePath = `documents/${project.id}/${uuidv4()}-${file.name}`;
-      const storageRef = ref(storage, storagePath);
-      
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
+      // For local demo, we use an object URL. It's temporary and valid for the session.
+      const url = URL.createObjectURL(file);
 
-      await addDoc(collection(db, 'documents'), {
+      onAddDocument({
         name: file.name,
         url,
         projectId: project.id,
         fileType: file.type,
-        storagePath,
-        uploadedAt: serverTimestamp(),
+        uploadedAt: new Date().toISOString(),
       });
 
     } catch (error) {
-      console.error("Error uploading file: ", error);
-      alert("There was an error uploading the file. Please try again.");
+      console.error("Error handling file: ", error);
+      alert("There was an error handling the file. Please try again.");
     } finally {
       setIsUploading(false);
       if(fileInputRef.current) fileInputRef.current.value = "";
@@ -64,10 +57,9 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ project, documents, c
         return;
     }
     try {
-        const fileRef = ref(storage, document.storagePath);
-        await deleteObject(fileRef);
-
-        await deleteDoc(doc(db, 'documents', document.id));
+        // Revoke the object URL to free up memory
+        URL.revokeObjectURL(document.url);
+        onDeleteDocument(document.id);
     } catch(error) {
         console.error("Error deleting document: ", error);
         alert("There was an error deleting the document. Please try again.");
@@ -117,7 +109,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ project, documents, c
                     </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-brand-gray">
-                    {documents.sort((a, b) => b.uploadedAt.seconds - a.uploadedAt.seconds).map(doc => (
+                    {documents.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()).map(doc => (
                         <DocumentRow 
                             key={doc.id} 
                             document={doc} 

@@ -1,8 +1,7 @@
-import React, { createContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { collection, onSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
-import { db } from '../firebase';
-import { Project, Task, StaffMember, Document, CostItem } from '../types';
-import { sampleProjects, sampleTasks, sampleStaff, sampleCosts } from '../sample-data';
+import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { Project, Task, StaffMember, Document, CostItem, ChangeRequest } from '../types';
+import * as LocalStorageService from '../services/localStorageService';
 
 interface DataContextProps {
     projects: Project[];
@@ -11,100 +10,166 @@ interface DataContextProps {
     documents: Document[];
     costs: CostItem[];
     loading: boolean;
-    showSampleData: boolean;
-    toggleShowSampleData: () => void;
+    resetData: () => void;
+    addProject: (project: Omit<Project, 'id'>) => void;
+    updateProject: (project: Project) => void;
+    deleteProject: (projectId: string) => void;
+    addTask: (task: Omit<Task, 'id'>) => void;
+    updateTask: (task: Task) => void;
+    deleteTask: (taskId: string) => void;
+    addStaff: (staff: Omit<StaffMember, 'id'>) => void;
+    updateStaff: (staff: StaffMember) => void;
+    deleteStaff: (staffId: string) => void;
+    addCost: (cost: Omit<CostItem, 'id'>) => void;
+    updateCost: (cost: CostItem) => void;
+    deleteCost: (costId: string) => void;
+    addDocument: (document: Omit<Document, 'id'>) => void;
+    deleteDocument: (documentId: string) => void;
+    addChangeRequest: (request: Omit<ChangeRequest, 'id' | 'submittedAt'>) => void;
 }
 
-export const DataContext = createContext<DataContextProps>({
-    projects: [],
-    tasks: [],
-    staffMembers: [],
-    documents: [],
-    costs: [],
-    loading: true,
-    showSampleData: false,
-    toggleShowSampleData: () => {},
-});
+export const DataContext = createContext<DataContextProps | undefined>(undefined);
 
 interface DataProviderProps {
     children: ReactNode;
 }
 
-const docToType = <T,>(doc: QueryDocumentSnapshot<DocumentData>): T => {
-    return { ...doc.data(), id: doc.id } as T;
-};
-
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-    const [liveProjects, setLiveProjects] = useState<Project[]>([]);
-    const [liveTasks, setLiveTasks] = useState<Task[]>([]);
-    const [liveStaffMembers, setLiveStaffMembers] = useState<StaffMember[]>([]);
-    const [liveDocuments, setLiveDocuments] = useState<Document[]>([]);
-    const [liveCosts, setLiveCosts] = useState<CostItem[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+    const [documents, setDocuments] = useState<Document[]>([]); // In-memory only
+    const [costs, setCosts] = useState<CostItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const [showSampleData, setShowSampleData] = useState<boolean>(() => {
-        try {
-            const stored = localStorage.getItem('showSampleData');
-            return stored ? JSON.parse(stored) : false;
-        } catch {
-            return false;
-        }
-    });
-
-    useEffect(() => {
-        localStorage.setItem('showSampleData', JSON.stringify(showSampleData));
-    }, [showSampleData]);
-
-    const toggleShowSampleData = () => {
-        setShowSampleData(prev => !prev);
-    };
-
-    useEffect(() => {
-        const fetchInitialData = async () => {
-            setLoading(true);
-
-            const unsubProjects = onSnapshot(collection(db, 'projects'), (snapshot) => {
-                setLiveProjects(snapshot.docs.map(doc => docToType<Project>(doc)));
-            });
-
-            const unsubTasks = onSnapshot(collection(db, 'tasks'), (snapshot) => {
-                setLiveTasks(snapshot.docs.map(doc => docToType<Task>(doc)));
-            });
-
-            const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-                setLiveStaffMembers(snapshot.docs.map(doc => docToType<StaffMember>(doc)));
-            });
-
-            const unsubDocuments = onSnapshot(collection(db, 'documents'), (snapshot) => {
-                setLiveDocuments(snapshot.docs.map(doc => docToType<Document>(doc)));
-            });
-            
-            const unsubCosts = onSnapshot(collection(db, 'costs'), (snapshot) => {
-                setLiveCosts(snapshot.docs.map(doc => docToType<CostItem>(doc)));
-            });
-
-            setTimeout(() => setLoading(false), 1500);
-
-            return () => {
-                unsubProjects();
-                unsubTasks();
-                unsubUsers();
-                unsubDocuments();
-                unsubCosts();
-            };
-        };
-        
-        fetchInitialData();
+    const loadData = useCallback(() => {
+        setLoading(true);
+        LocalStorageService.initializeData();
+        setProjects(LocalStorageService.getProjects());
+        setTasks(LocalStorageService.getTasks());
+        setStaffMembers(LocalStorageService.getStaff());
+        setCosts(LocalStorageService.getCosts());
+        // Documents are not persisted
+        setDocuments([]); 
+        setLoading(false);
     }, []);
 
-    const projects = useMemo(() => showSampleData ? [...sampleProjects, ...liveProjects] : liveProjects, [showSampleData, liveProjects]);
-    const tasks = useMemo(() => showSampleData ? [...sampleTasks, ...liveTasks] : liveTasks, [showSampleData, liveTasks]);
-    const staffMembers = useMemo(() => showSampleData ? [...sampleStaff, ...liveStaffMembers] : liveStaffMembers, [showSampleData, liveStaffMembers]);
-    const costs = useMemo(() => showSampleData ? [...sampleCosts, ...liveCosts] : liveCosts, [showSampleData, liveCosts]);
-    const documents = useMemo(() => liveDocuments, [liveDocuments]); // No sample documents for now.
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    const resetData = useCallback(() => {
+        LocalStorageService.clearData();
+        loadData();
+    }, [loadData]);
+    
+    // Generic update and save function
+    const updateAndSave = <T extends { id: string }>(
+        items: T[], 
+        setter: React.Dispatch<React.SetStateAction<T[]>>, 
+        saveFunction: (data: T[]) => void, 
+        updatedItem: T
+    ) => {
+        const newItems = items.map(item => item.id === updatedItem.id ? updatedItem : item);
+        setter(newItems);
+        saveFunction(newItems);
+    };
+
+    // Generic delete and save function
+     const deleteAndSave = <T extends { id:string } >(
+        items: T[],
+        setter: React.Dispatch<React.SetStateAction<T[]>>,
+        saveFunction: (data: T[]) => void,
+        itemId: string
+    ) => {
+        const newItems = items.filter(item => item.id !== itemId);
+        setter(newItems);
+        saveFunction(newItems);
+    }
+    
+    // Projects
+    const addProject = (projectData: Omit<Project, 'id'>) => {
+        const newProject = { ...projectData, id: uuidv4() };
+        const updatedProjects = [...projects, newProject];
+        setProjects(updatedProjects);
+        LocalStorageService.saveProjects(updatedProjects);
+    };
+    const updateProject = (project: Project) => updateAndSave(projects, setProjects, LocalStorageService.saveProjects, project);
+    const deleteProject = (projectId: string) => {
+        const newProjects = projects.filter(p => p.id !== projectId);
+        const newTasks = tasks.filter(t => t.projectId !== projectId);
+        const newCosts = costs.filter(c => c.projectId !== projectId);
+        const newDocuments = documents.filter(d => d.projectId !== projectId);
+
+        setProjects(newProjects);
+        setTasks(newTasks);
+        setCosts(newCosts);
+        setDocuments(newDocuments);
+
+        LocalStorageService.saveProjects(newProjects);
+        LocalStorageService.saveTasks(newTasks);
+        LocalStorageService.saveCosts(newCosts);
+    };
+    
+    // Tasks
+    const addTask = (taskData: Omit<Task, 'id'>) => {
+        const newTask = { ...taskData, id: uuidv4() };
+        const updatedTasks = [...tasks, newTask];
+        setTasks(updatedTasks);
+        LocalStorageService.saveTasks(updatedTasks);
+    };
+    const updateTask = (task: Task) => updateAndSave(tasks, setTasks, LocalStorageService.saveTasks, task);
+    const deleteTask = (taskId: string) => deleteAndSave(tasks, setTasks, LocalStorageService.saveTasks, taskId);
+    
+    // Staff
+    const addStaff = (staffData: Omit<StaffMember, 'id'>) => {
+        const newStaff = { ...staffData, id: uuidv4() };
+        const updatedStaff = [...staffMembers, newStaff];
+        setStaffMembers(updatedStaff);
+        LocalStorageService.saveStaff(updatedStaff);
+    };
+    const updateStaff = (staff: StaffMember) => updateAndSave(staffMembers, setStaffMembers, LocalStorageService.saveStaff, staff);
+    const deleteStaff = (staffId: string) => deleteAndSave(staffMembers, setStaffMembers, LocalStorageService.saveStaff, staffId);
+    
+    // Costs
+    const addCost = (costData: Omit<CostItem, 'id'>) => {
+        const newCost = { ...costData, id: uuidv4() };
+        const updatedCosts = [...costs, newCost];
+        setCosts(updatedCosts);
+        LocalStorageService.saveCosts(updatedCosts);
+    };
+    const updateCost = (cost: CostItem) => updateAndSave(costs, setCosts, LocalStorageService.saveCosts, cost);
+    const deleteCost = (costId: string) => deleteAndSave(costs, setCosts, LocalStorageService.saveCosts, costId);
+    
+    // Documents (in-memory only)
+    const addDocument = (docData: Omit<Document, 'id'>) => {
+        setDocuments(prev => [...prev, { ...docData, id: uuidv4() }]);
+    };
+    const deleteDocument = (docId: string) => {
+        setDocuments(prev => prev.filter(d => d.id !== docId));
+    };
+
+    // Change Requests
+    const addChangeRequest = (request: Omit<ChangeRequest, 'id' | 'submittedAt'>) => {
+        const changeRequests = LocalStorageService.getChangeRequests();
+        const newRequest = { ...request, id: uuidv4(), submittedAt: new Date().toISOString() };
+        const updatedRequests = [...changeRequests, newRequest];
+        LocalStorageService.saveChangeRequests(updatedRequests);
+    };
+
+
+    const value = {
+        projects, tasks, staffMembers, documents, costs, loading, resetData,
+        addProject, updateProject, deleteProject,
+        addTask, updateTask, deleteTask,
+        addStaff, updateStaff, deleteStaff,
+        addCost, updateCost, deleteCost,
+        addDocument, deleteDocument,
+        addChangeRequest,
+    };
 
     return (
-        <DataContext.Provider value={{ projects, tasks, staffMembers, documents, costs, loading, showSampleData, toggleShowSampleData }}>
+        <DataContext.Provider value={value}>
             {children}
         </DataContext.Provider>
     );

@@ -1,7 +1,6 @@
 
+
 import React, { useState, useMemo } from 'react';
-import { doc, addDoc, updateDoc, deleteDoc, collection } from 'firebase/firestore';
-import { db } from '../../firebase';
 import { Task, TaskStatus, ProjectStatus, ProjectWithTasks } from '../../types';
 import { PlusIcon } from '../icons/Icons.tsx';
 import TaskModal from '../tasks/TaskModal';
@@ -10,7 +9,7 @@ import CompletedProjectsAccordion from '../tasks/CompletedProjectsAccordion';
 import { useData } from '../../hooks/useData';
 
 const Tasks: React.FC = () => {
-  const { tasks, projects } = useData();
+  const { tasks, projects, addTask, updateTask, deleteTask } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -47,7 +46,7 @@ const Tasks: React.FC = () => {
     setEditingTask(null);
   };
 
-  const handleSaveTask = async (taskToSave: Task) => {
+  const handleSaveTask = async (taskToSave: Omit<Task, 'id'> & { id?: string }) => {
     if (taskToSave.isSample) {
         alert("Sample tasks are read-only and cannot be edited.");
         handleCloseModal();
@@ -55,13 +54,9 @@ const Tasks: React.FC = () => {
     }
     try {
         if (taskToSave.id) {
-            // Editing existing task
-            const taskRef = doc(db, 'tasks', taskToSave.id);
-            await updateDoc(taskRef, { ...taskToSave });
+            updateTask(taskToSave as Task);
         } else {
-            // Creating new task
-            const { id, ...newTaskData } = taskToSave;
-            await addDoc(collection(db, 'tasks'), newTaskData);
+            addTask(taskToSave);
         }
     } catch (error) {
         console.error("Error saving task: ", error);
@@ -79,11 +74,10 @@ const Tasks: React.FC = () => {
         return;
     }
     try {
-        const taskRef = doc(db, 'tasks', taskId);
-        await deleteDoc(taskRef);
+        deleteTask(taskId);
     } catch (error) {
         console.error("Error deleting task: ", error);
-        alert("There was an error deleting the task. Please try again.");
+        alert("There was an error deleting the task.");
     } finally {
         handleCloseModal();
     }

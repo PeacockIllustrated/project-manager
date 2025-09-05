@@ -1,11 +1,12 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useData } from '../../hooks/useData';
 import ProjectSelector from '../documents/ProjectSelector';
 import DocumentManager from '../documents/DocumentManager';
 
 const Documents: React.FC = () => {
-  const { projects, documents, costs } = useData();
+  const { projects, documents, costs, addDocument, deleteDocument } = useData();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   // Select first project by default on larger screens
@@ -13,7 +14,7 @@ const Documents: React.FC = () => {
     if (window.innerWidth >= 768 && projects.length > 0 && !selectedProjectId) {
       setSelectedProjectId(projects[0].id);
     }
-  }, [projects]);
+  }, [projects, selectedProjectId]);
 
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
@@ -42,6 +43,8 @@ const Documents: React.FC = () => {
           documents={projectDocuments}
           costs={costs}
           onBack={() => setSelectedProjectId(null)}
+          onAddDocument={addDocument}
+          onDeleteDocument={deleteDocument}
         />
       </div>
     </div>

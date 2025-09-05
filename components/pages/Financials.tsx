@@ -1,12 +1,11 @@
 
+
 import React, { useMemo, useState } from 'react';
 import { useData } from '../../hooks/useData';
 import { Project, ProjectStatus, CostItem, Document } from '../../types';
 import { DollarSignIcon, TrendingUpIcon, AlertTriangleIcon, PlusIcon, ChevronDownIcon, FileTextIcon, EditIcon, TrashIcon } from '../icons/Icons.tsx';
 import KPICard from '../financials/KPICard';
 import CostModal from '../financials/LaborCostModal';
-import { addDoc, collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
 import Badge from '../ui/Badge';
 
 interface ProjectFinancials extends Project {
@@ -80,7 +79,7 @@ const ProjectCostDetails: React.FC<{
 
 
 const Financials: React.FC = () => {
-  const { projects, costs, documents } = useData();
+  const { projects, costs, documents, addCost, updateCost, deleteCost } = useData();
   const [isCostModalOpen, setIsCostModalOpen] = useState(false);
   const [costModalProject, setCostModalProject] = useState<Project | null>(null);
   const [editingCost, setEditingCost] = useState<CostItem | null>(null);
@@ -160,14 +159,14 @@ const Financials: React.FC = () => {
 
     if (!window.confirm("Are you sure you want to delete this cost item?")) return;
     try {
-        await deleteDoc(doc(db, 'costs', costId));
+        deleteCost(costId);
     } catch(error) {
         console.error("Error deleting cost item: ", error);
         alert("There was an error deleting the cost item.");
     }
   };
 
-  const handleSaveCost = async (costData: Omit<CostItem, 'projectId'> & { id?: string }) => {
+  const handleSaveCost = async (costData: Omit<CostItem, 'projectId' | 'id'> & { id?: string }) => {
     if (costData.id) { // Editing
         const originalCost = costs.find(c => c.id === costData.id);
         if (originalCost?.isSample) {
@@ -178,15 +177,13 @@ const Financials: React.FC = () => {
             return;
         }
     }
-
-    const { id, ...data } = costData;
+    
     try {
-        if (id) {
-            const costRef = doc(db, 'costs', id);
-            await updateDoc(costRef, data);
+        if (costData.id) {
+            updateCost(costData as CostItem);
         } else if (costModalProject) {
-            await addDoc(collection(db, 'costs'), {
-                ...data,
+            addCost({
+                ...costData,
                 projectId: costModalProject.id,
             });
         } else {

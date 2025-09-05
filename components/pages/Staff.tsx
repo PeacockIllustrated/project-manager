@@ -1,7 +1,6 @@
 
+
 import React, { useState } from 'react';
-import { doc, addDoc, updateDoc, deleteDoc, collection } from 'firebase/firestore';
-import { db } from '../../firebase';
 import { StaffMember } from '../../types';
 import { useData } from '../../hooks/useData';
 import { PlusIcon, BriefcaseIcon } from '../icons/Icons.tsx';
@@ -10,7 +9,7 @@ import StaffCard from '../staff/StaffCard';
 import StaffModal from '../staff/StaffModal';
 
 const Staff: React.FC = () => {
-  const { staffMembers } = useData();
+  const { staffMembers, addStaff, updateStaff, deleteStaff } = useData();
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
@@ -35,14 +34,9 @@ const Staff: React.FC = () => {
     }
     try {
       if (staffToSave.id) {
-        // Editing existing staff member
-        const staffRef = doc(db, 'users', staffToSave.id);
-        const { id, ...staffData } = staffToSave;
-        await updateDoc(staffRef, staffData);
+        updateStaff(staffToSave as StaffMember);
       } else {
-        // Creating new staff member
-        const { id, ...newStaffData } = staffToSave;
-        await addDoc(collection(db, 'users'), newStaffData);
+        addStaff(staffToSave);
       }
     } catch (error) {
       console.error("Error saving staff member: ", error);
@@ -62,7 +56,7 @@ const Staff: React.FC = () => {
         return;
     }
     try {
-        await deleteDoc(doc(db, 'users', staffId));
+        deleteStaff(staffId);
     } catch (error) {
         console.error("Error deleting staff member: ", error);
         alert("There was an error deleting the staff member. Please try again.");

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Task, TaskStatus, TaskPriority } from '../../types';
 import { TrashIcon } from '../icons/Icons.tsx';
@@ -7,7 +8,7 @@ import { useData } from '../../hooks/useData';
 interface TaskModalProps {
   task: Task | null;
   onClose: () => void;
-  onSave: (task: Task) => void;
+  onSave: (task: Omit<Task, 'id'> & { id?: string }) => void;
   onDelete: (taskId: string) => void;
 }
 
@@ -61,7 +62,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onClose, onSave, onDelete }
         alert('Please fill in all required fields.');
         return;
     };
-    onSave({ ...(task || {}), ...formData, id: task?.id || '' });
+    onSave({ ...(task || {}), ...formData });
   };
 
   const handleDelete = () => {

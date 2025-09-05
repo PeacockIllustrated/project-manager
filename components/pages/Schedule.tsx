@@ -1,7 +1,6 @@
 
+
 import React, { useState, useMemo } from 'react';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
 import { useData } from '../../hooks/useData';
 import { Task } from '../../types';
 import TaskModal from '../tasks/TaskModal';
@@ -22,7 +21,7 @@ export interface TaskWithProject extends Task {
 }
 
 const Schedule: React.FC = () => {
-  const { tasks, projects, staffMembers } = useData();
+  const { tasks, projects, staffMembers, updateTask, deleteTask } = useData();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<ScheduleView>('month');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,11 +51,10 @@ const Schedule: React.FC = () => {
     setSelectedTask(null);
   };
 
-  const handleSaveTask = async (taskToSave: Task) => {
+  const handleSaveTask = async (taskToSave: Omit<Task, 'id'> & { id?: string }) => {
     if (!taskToSave.id) return;
     try {
-      const taskRef = doc(db, 'tasks', taskToSave.id);
-      await updateDoc(taskRef, { ...taskToSave });
+      updateTask(taskToSave as Task);
     } catch (error) {
       console.error("Error updating task from schedule: ", error);
       alert("There was an error saving the task.");
@@ -67,8 +65,7 @@ const Schedule: React.FC = () => {
   
   const handleDeleteTask = async (taskId: string) => {
      try {
-        const taskRef = doc(db, 'tasks', taskId);
-        await deleteDoc(taskRef);
+        deleteTask(taskId);
     } catch (error) {
         console.error("Error deleting task: ", error);
         alert("There was an error deleting the task.");
@@ -103,7 +100,7 @@ const Schedule: React.FC = () => {
           {renderView()}
         </div>
       </div>
-      {isModalOpen && (
+      {isModalOpen && selectedTask && (
         <TaskModal 
           task={selectedTask} 
           onClose={handleCloseModal} 

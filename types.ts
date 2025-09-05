@@ -56,11 +56,7 @@ export interface Document {
   url: string;
   projectId: string;
   fileType: string;
-  storagePath: string;
-  uploadedAt: {
-    seconds: number;
-    nanoseconds: number;
-  };
+  uploadedAt: string; // ISO 8601 format
 }
 
 export interface CostItem {
@@ -105,8 +101,5 @@ export interface ChangeRequest {
   description: string;
   featureArea: Page;
   priority: ChangeRequestPriority;
-  submittedAt: {
-    seconds: number;
-    nanoseconds: number;
-  };
+  submittedAt: string; // ISO 8601 format
 }

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Project, CostItem } from '../../types';
 import { useData } from '../../hooks/useData';
@@ -6,7 +7,7 @@ import { useData } from '../../hooks/useData';
 interface CostModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (costData: Omit<CostItem, 'projectId'> & { id?: string }) => void;
+  onSave: (costData: Omit<CostItem, 'projectId' | 'id'> & { id?: string }) => void;
   project: Project;
   costToEdit?: CostItem | null;
 }
@@ -75,15 +76,12 @@ const CostModal: React.FC<CostModalProps> = ({ isOpen, onClose, onSave, project,
 
     const { documentId, ...rest } = formData;
     
-    const dataToSave: Omit<CostItem, 'projectId'> & { id?: string } = {
+    const dataToSave = {
         ...rest,
         id: costToEdit?.id,
         date: new Date(formData.date).toISOString(),
+        ...(documentId && { documentId }),
     };
-
-    if (documentId) {
-        dataToSave.documentId = documentId;
-    }
 
     onSave(dataToSave);
   };

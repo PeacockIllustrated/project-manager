@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Document, CostItem } from '../../types';
 import { MoreHorizontalIcon, DownloadIcon, TrashIcon, FileTextIcon } from '../icons/Icons.tsx';
@@ -14,7 +15,7 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ document: documentProp, costs
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   
-  const formattedDate = new Date(documentProp.uploadedAt.seconds * 1000).toLocaleDateString();
+  const formattedDate = new Date(documentProp.uploadedAt).toLocaleDateString();
 
   const isLinkedToCost = useMemo(() => {
     return costs.some(cost => cost.documentId === documentProp.id);

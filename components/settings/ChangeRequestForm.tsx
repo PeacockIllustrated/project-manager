@@ -1,9 +1,9 @@
 
+
 import React, { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase';
 import { Page, ChangeRequestPriority } from '../../types';
 import { LightbulbIcon } from '../icons/Icons.tsx';
+import { useData } from '../../hooks/useData';
 
 const ChangeRequestForm: React.FC = () => {
   const [description, setDescription] = useState('');
@@ -12,6 +12,7 @@ const ChangeRequestForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const { addChangeRequest } = useData();
   
   const featureAreas: Page[] = ['Project Hub', 'Tasks', 'Schedule', 'Staff', 'Documents', 'Financials', 'Client Portal', 'Settings'];
 
@@ -27,12 +28,7 @@ const ChangeRequestForm: React.FC = () => {
     setSubmitError(null);
 
     try {
-      await addDoc(collection(db, 'changeRequests'), {
-        description,
-        featureArea,
-        priority,
-        submittedAt: serverTimestamp(),
-      });
+      addChangeRequest({ description, featureArea, priority });
       setSubmitSuccess(true);
       setDescription('');
       setFeatureArea('Project Hub');
