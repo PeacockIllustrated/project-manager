@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            'brand-charcoal': '#3C4A4D',
+            'brand-teal': '#43C4B2',
+            'brand-light-gray': '#F8F9FA',
+            'brand-gray': '#E9ECEF',
+            'brand-text': '#6C757D',
+          },
+          keyframes: {
+            'accordion-down': {
+              from: { height: '0px', opacity: '0' },
+              to: { height: 'var(--accordion-content-height)', opacity: '1' },
+            },
+            'accordion-up': {
+              from: { height: 'var(--accordion-content-height)', opacity: '1' },
+              to: { height: '0px', opacity: '0' },
+            },
+          },
+          animation: {
+            'accordion-down': 'accordion-down 0.2s ease-out',
+            'accordion-up': 'accordion-up 0.2s ease-out',
+          },
+        }
+      }
+    }
+  </script>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.0.0/",
+    "react": "https://esm.sh/react@^19.0.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.0.0/",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.2.1/",
+    "uuid": "https://aistudiocdn.com/uuid@^11.1.0",
+    "@google/genai": "https://esm.sh/@google/genai",
+    "@firebase/storage": "https://aistudiocdn.com/@firebase/storage@^0.14.0"
+  }
+}
+</script>
+</head>
+<body class="bg-brand-light-gray">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
